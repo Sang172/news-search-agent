@@ -1,7 +1,12 @@
 {
-    "ImageRepository": {
-      "ImageIdentifier": "864899839701.dkr.ecr.us-west-2.amazonaws.com/news-search-agent:latest",
-      "ImageRepositoryType": "ECR"
+"ImageRepository": {
+    "ImageIdentifier": "864899839701.dkr.ecr.us-west-2.amazonaws.com/news-search-agent:latest",
+    "ImageRepositoryType": "ECR",
+    "ImageConfiguration": {
+    "Port": "8080"
     }
-  }
-  
+},
+"AuthenticationConfiguration": {
+    "AccessRoleArn": "arn:aws:iam::864899839701:role/AppRunnerECRRole"
+}
+}

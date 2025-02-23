@@ -3,7 +3,7 @@ name: Deploy to AWS App Runner
 on:
   push:
     branches:
-      - main  # Change if your default branch is different
+      - main
 
 jobs:
   deploy:
@@ -15,7 +15,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -28,20 +28,21 @@ jobs:
     - name: Build and Push Docker Image
       id: build-image
       run: |
-        ECR_REGISTRY=$(aws ecr describe-repositories --repository-names news-search-agent --query "repositories[0].repositoryUri" --output text)
-        
-        docker build -t $ECR_REGISTRY:latest .
-        docker push $ECR_REGISTRY:latest
-        
-        echo "ECR_URI=$ECR_REGISTRY:latest" >> $GITHUB_ENV
+        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+        ECR_REGISTRY=$(${ steps.login-ecr.outputs.registry })
+        ECR_REPOSITORY=$(echo ${{ secrets.AWS_REGION }} | sed 's/-//g')newssearchagent 
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        echo "ECR_URI=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >> $GITHUB_ENV
 
     - name: Deploy to AWS App Runner
+      id: deploy
       run: |
         SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='news-search-service'].ServiceArn" --output text)
-
         if [ -z "$SERVICE_ARN" ]; then
           echo "Creating new AWS App Runner service..."
-          aws apprunner create-service --service-name news-search-service --source-configuration file://apprunner-source.json
+          SERVICE_ID=$(aws apprunner create-service --service-name news-search-service --source-configuration file://apprunner-source.json --query "Service.ServiceId" --output text)
+          aws apprunner start-deployment --service-id $SERVICE_ID # Start the deployment
         else
           echo "Updating existing AWS App Runner service..."
           aws apprunner update-service --service-arn $SERVICE_ARN --source-configuration file://apprunner-source.json
