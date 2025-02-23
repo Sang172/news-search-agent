@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from fetch_news import topic_keywords, keyphrase_search, topic_search, general_search 
 from pydantic import BaseModel, Field
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, Union, Optional, Tuple
 from flask import Flask, request, render_template
 import boto3
 import json
@@ -117,11 +117,11 @@ def fetch_news(news_request: NewsSearchRequest) -> NewsSearchResults:
     return NewsSearchResults(articles=articles)
 
 
-def process_input(user_input: str) -> Union[NewsSearchResults, str]:
+def process_input(user_input: str) -> Tuple[Optional[NewsSearchRequest], Union[NewsSearchResults, str]]:
     """Processes user input, checks relevance, classifies intent, and fetches news."""
 
     if not check_relevance(user_input):
-        return "I can only help with news search. Please provide a new input related to news search."
+        return None, "I can only help with news search. Please provide a new input related to news search."
 
     news_request = classify_news_intent(user_input)
     news_result = fetch_news(news_request)
@@ -143,13 +143,14 @@ def index():
         user_input_display = user_input
         news_request, news_result = process_input(user_input)
 
-        search_type_display = news_request.search_type
-        if news_request.search_type == 'keyphrase':
-            search_terms_display = ", ".join(news_request.keyphrases)
-        elif news_request.search_type == 'topic':
-            search_terms_display = ", ".join(news_request.topics)
-        else:
-            search_terms_display = "General Search"
+        if news_request:
+            search_type_display = news_request.search_type
+            if news_request.search_type == 'keyphrase':
+                search_terms_display = ", ".join(news_request.keyphrases)
+            elif news_request.search_type == 'topic':
+                search_terms_display = ", ".join(news_request.topics)
+            else:
+                search_terms_display = "General Search"
 
 
         if isinstance(news_result, str):
@@ -168,6 +169,7 @@ def index():
                     'time': article.time,
                     'url': article.url
                 })
+            articles = sorted(articles, key = lambda x: x['time'], reverse=True)
 
         return render_template('index.html',
                                articles=articles,
