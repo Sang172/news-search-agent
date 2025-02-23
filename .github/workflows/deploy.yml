@@ -43,13 +43,13 @@ jobs:
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Deploy to App Runner
-        uses: awslabs/amazon-app-runner-deploy@v2
+        uses: awslabs/amazon-app-runner-deploy@v1
         with:
-          service: news-app-service 
+          service: news-search-agent 
           region: ${{ secrets.AWS_REGION }}
           image: ${{ steps.build-image.outputs.image }}
           port: "8080"
-          instance-role: AppRunnerECRInstanceRole
+          instance-role: AppRunnerECRRole
 
       - name: Output App Runner URL
         run: |
