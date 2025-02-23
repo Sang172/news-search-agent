@@ -28,7 +28,7 @@ jobs:
     - name: Set ECR Registry in Environment
       run: |
         echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> "$GITHUB_ENV"
-        echo "ECR_REPOSITORY=news-search-agent" >> "$GITHUB_ENV"
+        echo "ECR_REPOSITORY=news-search-agent" >> "$GITHUB_ENV"  # Correct repository name
 
     - name: Build and Push Docker Image
       run: |
@@ -36,14 +36,9 @@ jobs:
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
     - name: Deploy to AWS App Runner
-      id: deploy
-      run: |
-        SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='news-search-service'].ServiceArn" --output text)
-        if [ -z "$SERVICE_ARN" ]; then
-          echo "Creating new AWS App Runner service..."
-          SERVICE_ID=$(aws apprunner create-service --service-name news-search-service --source-configuration file://apprunner-source.json --query "Service.ServiceId" --output text)
-          aws apprunner start-deployment --service-id $SERVICE_ID  # Corrected: Use ServiceId, not ServiceArn for initial start
-        else
-          echo "Updating existing AWS App Runner service..."
-          aws apprunner update-service --service-arn "$SERVICE_ARN" --source-configuration file://apprunner-source.json #Corrected Service Arn
-        fi
+      uses: aws-actions/aws-apprunner-deploy@v1
+      with:
+        service: news-search-service
+        region: ${{ secrets.AWS_REGION }}
+        source-configuration: file://apprunner-source.json
+        wait-for-service-stability: true
