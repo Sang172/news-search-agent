@@ -28,7 +28,7 @@ jobs:
     - name: Build and Push Docker Image
       id: build-image
       run: |
-        ECR_REGISTRY=$(aws ecr describe-repositories --repository-names new-search-agent --query "repositories[0].repositoryUri" --output text)
+        ECR_REGISTRY=$(aws ecr describe-repositories --repository-names news-search-agent --query "repositories[0].repositoryUri" --output text)
         
         docker build -t $ECR_REGISTRY:latest .
         docker push $ECR_REGISTRY:latest
