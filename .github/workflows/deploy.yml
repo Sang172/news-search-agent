@@ -3,7 +3,7 @@ name: Deploy to AWS App Runner
 on:
   push:
     branches:
-      - main
+      - main  # Change if your default branch is different
 
 jobs:
   deploy:
@@ -40,12 +40,9 @@ jobs:
         SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='news-search-service'].ServiceArn" --output text)
 
         if [ -z "$SERVICE_ARN" ]; then
-          aws apprunner create-service \
-            --service-name news-search-service \
-            --source-configuration ImageRepository={ImageIdentifier=$ECR_URI,ImageRepositoryType="ECR"} \
-            --instance-configuration Cpu=1vCPU,Memory=2GB
+          echo "Creating new AWS App Runner service..."
+          aws apprunner create-service --service-name news-search-service --source-configuration file://apprunner-source.json
         else
-          aws apprunner update-service \
-            --service-arn $SERVICE_ARN \
-            --source-configuration ImageRepository={ImageIdentifier=$ECR_URI,ImageRepositoryType="ECR"}
+          echo "Updating existing AWS App Runner service..."
+          aws apprunner update-service --service-arn $SERVICE_ARN --source-configuration file://apprunner-source.json
         fi

@@ -1,0 +1,7 @@
+{
+    "ImageRepository": {
+      "ImageIdentifier": "864899839701.dkr.ecr.us-west-2.amazonaws.com/news-search-agent:latest",
+      "ImageRepositoryType": "ECR"
+    }
+  }
+  
