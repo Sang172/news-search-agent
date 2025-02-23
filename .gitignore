@@ -172,3 +172,4 @@ cython_debug/
 
 *.ipynb
 app_local.py
+.DS_Store
