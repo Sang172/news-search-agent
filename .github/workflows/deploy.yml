@@ -1,4 +1,4 @@
-name: Deploy to AWS App Runner (with Docker)
+name: Deploy to AWS App Runner
 
 on:
   push:
@@ -7,50 +7,45 @@ on:
 
 jobs:
   deploy:
+    name: Build and Deploy
     runs-on: ubuntu-latest
 
-    permissions:
-      id-token: write
-      contents: read
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
-        env:
-          ECR_REPOSITORY: news-search-agent  # Your ECR repository name
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          ECR_REGISTRY=$(aws ecr describe-repositories --repository-names $ECR_REPOSITORY --query 'repositories[0].repositoryUri' --output text | cut -d/ -f1)
-          docker build -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
-          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+    - name: Build and Push Docker Image
+      id: build-image
+      run: |
+        ECR_REGISTRY=$(aws ecr describe-repositories --repository-names new-search-agent --query "repositories[0].repositoryUri" --output text)
+        
+        docker build -t $ECR_REGISTRY:latest .
+        docker push $ECR_REGISTRY:latest
+        
+        echo "ECR_URI=$ECR_REGISTRY:latest" >> $GITHUB_ENV
 
-      - name: Deploy to App Runner
-        uses: aws-actions/amazon-app-runner-deploy
-        with:
-          service: news-search-agent
-          region: ${{ secrets.AWS_REGION }}
-          image: ${{ steps.build-image.outputs.image }}
-          port: "8080"
-          instance-role: AppRunnerECRRole
+    - name: Deploy to AWS App Runner
+      run: |
+        SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='news-search-service'].ServiceArn" --output text)
 
-      - name: Output App Runner URL
-        run: |
-          aws apprunner describe-service --service-name news-search-agent --query 'Service.ServiceUrl' --output text |
-          while read -r line; do
-            echo "App Runner URL: https://$line"
-          done
+        if [ -z "$SERVICE_ARN" ]; then
+          aws apprunner create-service \
+            --service-name news-search-service \
+            --source-configuration ImageRepository={ImageIdentifier=$ECR_URI,ImageRepositoryType="ECR"} \
+            --instance-configuration Cpu=1vCPU,Memory=2GB
+        else
+          aws apprunner update-service \
+            --service-arn $SERVICE_ARN \
+            --source-configuration ImageRepository={ImageIdentifier=$ECR_URI,ImageRepositoryType="ECR"}
+        fi
