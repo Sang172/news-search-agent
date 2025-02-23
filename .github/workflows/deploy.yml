@@ -36,7 +36,7 @@ jobs:
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
     - name: Deploy to AWS App Runner
-      uses: aws-actions/aws-apprunner-deploy@v1
+      uses: aws-actions/apprunner-deploy@v1
       with:
         service: news-search-service
         region: ${{ secrets.AWS_REGION }}
