@@ -25,15 +25,15 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build and Push Docker Image
-      id: build-image
+    - name: Set ECR Registry in Environment
       run: |
-        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
-        ECR_REGISTRY=$(${ steps.login-ecr.outputs.registry })
-        ECR_REPOSITORY=$(echo ${{ secrets.AWS_REGION }} | sed 's/-//g')newssearchagent 
+        echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> "$GITHUB_ENV"
+        echo "ECR_REPOSITORY=$(echo ${{ secrets.AWS_REGION }} | sed 's/-//g')newssearchagent" >> "$GITHUB_ENV"
+
+    - name: Build and Push Docker Image
+      run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        echo "ECR_URI=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >> $GITHUB_ENV
 
     - name: Deploy to AWS App Runner
       id: deploy
@@ -42,7 +42,7 @@ jobs:
         if [ -z "$SERVICE_ARN" ]; then
           echo "Creating new AWS App Runner service..."
           SERVICE_ID=$(aws apprunner create-service --service-name news-search-service --source-configuration file://apprunner-source.json --query "Service.ServiceId" --output text)
-          aws apprunner start-deployment --service-id $SERVICE_ID # Start the deployment
+          aws apprunner start-deployment --service-id $SERVICE_ID
         else
           echo "Updating existing AWS App Runner service..."
           aws apprunner update-service --service-arn $SERVICE_ARN --source-configuration file://apprunner-source.json
