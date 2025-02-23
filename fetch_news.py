@@ -81,10 +81,10 @@ def topic_search(topics, topic_keywords):
     news_items = filter_fields(news_items)
     return news_items
 
-def keyword_search(keywords):
+def keyphrase_search(keyphrases):
     gnews = GNews(language='en', country='US', period='2d', max_results=5)
     news_items = []
-    for keyword in keywords:
+    for keyword in keyphrases:
         try:
             news = gnews.get_news(keyword)
             news = filter_us_outlets(news)

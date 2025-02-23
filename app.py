@@ -1,9 +1,9 @@
 import time
 import os
 from dotenv import load_dotenv
-from fetch_news import topic_keywords, keyword_search, topic_search, general_search
+from fetch_news import topic_keywords, keyphrase_search, topic_search, general_search 
 from pydantic import BaseModel, Field
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Optional
 from flask import Flask, request, render_template
 import boto3
 import json
@@ -15,8 +15,8 @@ AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 AWS_REGION_NAME = os.environ.get("AWS_REGION", "us-west-2")
 
 class NewsSearchRequest(BaseModel):
-    search_type: str = Field(description="Type of news search: 'topic', 'keyword', or 'general'")
-    keywords: List[str] = Field(description="List of keywords for keyword search", default=[])
+    search_type: str = Field(description="Type of news search: 'topic', 'keyphrase', or 'general'")
+    keyphrases: List[str] = Field(description="List of keyphrases for keyphrase search", default=[])
     topics: List[str] = Field(description="List of topics for topic search", default=[])
 
 class NewsArticle(BaseModel):
@@ -65,18 +65,18 @@ def classify_news_intent(user_input: str) -> NewsSearchRequest:
 
     topics_str = str(list(topic_keywords.keys()))
 
-    prompt = f"""You are a news search assistant. Classify the user's intent into one of the following search types: 'keyword', 'topic', or 'general'.
+    prompt = f"""You are a news search assistant. Classify the user's intent into one of the following search types: 'keyphrase', 'topic', or 'general'.
 
-    Prioritize 'keyword' search whenever specific keywords are present in the user's query. Only classify as 'topic' if the query clearly indicates a general subject area and lacks specific keywords.
+    Prioritize 'keyphrase' search whenever specific keyphrases are present in the user's query. Only classify as 'topic' if the query clearly indicates a general subject area and lacks specific keyphrases.
 
     Based on the search type:
-    - If 'keyword', extract a list of keywords.
+    - If 'keyphrase', extract a list of keyphrases.
     - If 'topic', extract a list of topics from: {topics_str}.
     - If 'general', no further information is needed.
 
     Return a JSON object with the following keys:
-    - search_type: (string) The search type ('keyword', 'topic', or 'general').
-    - keywords: (list of strings) The list of keywords (or an empty list).
+    - search_type: (string) The search type ('keyphrase', 'topic', or 'general'). # Changed 'keyword' to 'keyphrase'
+    - keyphrases: (list of strings) The list of keyphrases (or an empty list). # Renamed keywords to keyphrases
     - topics: (list of strings)  The list of topics (or an empty list).
 
     Do NOT include any additional text outside the JSON object.
@@ -86,7 +86,7 @@ def classify_news_intent(user_input: str) -> NewsSearchRequest:
     response_text = invoke_claude(prompt)
 
     try:
-        response_json = json.loads(response_text) 
+        response_json = json.loads(response_text)
         news_request = NewsSearchRequest(**response_json)
         return news_request
     except (json.JSONDecodeError, ValueError) as e:
@@ -106,8 +106,8 @@ def check_relevance(user_input: str) -> bool:
 
 def fetch_news(news_request: NewsSearchRequest) -> NewsSearchResults:
     """Fetches news articles based on the classified intent."""
-    if news_request.search_type == "keyword":
-        news_items = keyword_search(news_request.keywords)
+    if news_request.search_type == "keyphrase":
+        news_items = keyphrase_search(news_request.keyphrases)
     elif news_request.search_type == "topic":
         news_items = topic_search(news_request.topics, topic_keywords)
     else:
@@ -125,24 +125,39 @@ def process_input(user_input: str) -> Union[NewsSearchResults, str]:
 
     news_request = classify_news_intent(user_input)
     news_result = fetch_news(news_request)
-    return news_result
-
+    return news_request, news_result
 
 
 app = Flask(__name__)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    articles = []
+    error_message = None
+    user_input_display = None
+    search_type_display = None
+    search_terms_display = None
+
     if request.method == 'POST':
         user_input = request.form['user_input']
-        news_result = process_input(user_input)
+        user_input_display = user_input
+        news_request, news_result = process_input(user_input)
+
+        search_type_display = news_request.search_type
+        if news_request.search_type == 'keyphrase':
+            search_terms_display = ", ".join(news_request.keyphrases)
+        elif news_request.search_type == 'topic':
+            search_terms_display = ", ".join(news_request.topics)
+        else:
+            search_terms_display = "General Search"
+
 
         if isinstance(news_result, str):
             articles = []
             error_message = news_result
         elif len(news_result.articles) == 0:
              articles = []
-             error_message = 'I could not find any article containing your keyword(s) from major news outlets in the last 2 days.'
+             error_message = 'I could not find any article containing your search terms from major news outlets in the last 2 days.'
         else:
             articles = []
             error_message = None
@@ -154,10 +169,20 @@ def index():
                     'url': article.url
                 })
 
-        return render_template('index.html', articles=articles, error_message=error_message, user_input=user_input)
-    return render_template('index.html', articles=None, error_message=None, user_input=None)
-
-
+        return render_template('index.html',
+                               articles=articles,
+                               error_message=error_message,
+                               user_input=user_input_display,
+                               search_type=search_type_display,
+                               search_terms=search_terms_display
+                               )
+    return render_template('index.html',
+                           articles=None,
+                           error_message=None,
+                           user_input=None,
+                           search_type=None,
+                           search_terms=None
+                           )
 
 if __name__ == '__main__':
     app.run(debug=True)
