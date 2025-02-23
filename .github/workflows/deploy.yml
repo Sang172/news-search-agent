@@ -31,10 +31,10 @@ jobs:
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: news-search-agent
+          ECR_REPOSITORY: news-search-agent  # Your ECR repository name
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          ECR_REGISTRY=$(aws ecr describe-repositories --repository-names $ECR_REPOSITORY --query 'repositories[0].repositoryUri' --output text | cut -d/ -f1)
           docker build -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
@@ -50,7 +50,7 @@ jobs:
 
       - name: Output App Runner URL
         run: |
-          aws apprunner describe-service --service-name news-search-agent --query 'Service.ServiceUrl' --output text | # Use consistent service name
+          aws apprunner describe-service --service-name news-search-agent --query 'Service.ServiceUrl' --output text |
           while read -r line; do
             echo "App Runner URL: https://$line"
           done
