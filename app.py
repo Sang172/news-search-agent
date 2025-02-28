@@ -71,14 +71,18 @@ def classify_news_intent(user_input: str) -> NewsSearchRequest:
 
     Only classify as 'topic' if the query clearly indicates a general subject area *and* matches one of the provided topics. Do not infer broader topic categories.
 
+    If the user input is not clearly related to news or current events, classify the search type as 'general'.
+    
+    However, defaulting to 'general' should be a last resort. Attempt to classify it as 'keyphrase' or 'topic' first.
+    
     Based on the search type:
     - If 'keyphrase', extract a list of keyphrases.
     - If 'topic', extract a list of topics from: {topics_str}.
     - If 'general', no further information is needed.
 
     Return a JSON object with the following keys:
-    - search_type: (string) The search type ('keyphrase', 'topic', or 'general'). # Changed 'keyword' to 'keyphrase'
-    - keyphrases: (list of strings) The list of keyphrases (or an empty list). # Renamed keywords to keyphrases
+    - search_type: (string) The search type ('keyphrase', 'topic', or 'general').
+    - keyphrases: (list of strings) The list of keyphrases (or an empty list).
     - topics: (list of strings)  The list of topics (or an empty list).
 
     Do NOT include any additional text outside the JSON object.
