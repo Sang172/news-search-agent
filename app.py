@@ -69,6 +69,8 @@ def classify_news_intent(user_input: str) -> NewsSearchRequest:
 
     Prioritize 'keyphrase' search whenever specific keyphrases are present in the user's query. Only classify as 'topic' if the query clearly indicates a general subject area and lacks specific keyphrases.
 
+    Only classify as 'topic' if the query clearly indicates a general subject area *and* matches one of the provided topics. Do not infer broader topic categories.
+
     Based on the search type:
     - If 'keyphrase', extract a list of keyphrases.
     - If 'topic', extract a list of topics from: {topics_str}.
@@ -96,14 +98,6 @@ def classify_news_intent(user_input: str) -> NewsSearchRequest:
 
 
 
-
-def check_relevance(user_input: str) -> bool:
-    """Checks if the user input is related to news search."""
-    prompt = f"You are a helpful assistant that determines if a user's input is related to news search.  Answer 'yes' or 'no'.\n\nUser Input: {user_input}"
-    response = invoke_claude(prompt)
-    return response.strip().lower() == "yes"
-
-
 def fetch_news(news_request: NewsSearchRequest) -> NewsSearchResults:
     """Fetches news articles based on the classified intent."""
     if news_request.search_type == "keyphrase":
@@ -119,9 +113,6 @@ def fetch_news(news_request: NewsSearchRequest) -> NewsSearchResults:
 
 def process_input(user_input: str) -> Tuple[Optional[NewsSearchRequest], Union[NewsSearchResults, str]]:
     """Processes user input, checks relevance, classifies intent, and fetches news."""
-
-    if not check_relevance(user_input):
-        return None, "I can only help with news search. Please provide a new input related to news search."
 
     news_request = classify_news_intent(user_input)
     news_result = fetch_news(news_request)
