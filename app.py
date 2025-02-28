@@ -67,14 +67,16 @@ def classify_news_intent(user_input: str) -> NewsSearchRequest:
 
     prompt = f"""You are a news search assistant. Classify the user's intent into one of the following search types: 'keyphrase', 'topic', or 'general'.
 
-    Prioritize 'keyphrase' search whenever specific keyphrases are present in the user's query. Only classify as 'topic' if the query clearly indicates a general subject area and lacks specific keyphrases.
+    Prioritize 'keyphrase' search whenever specific keywords or keyphrases are present in the user's query.
+    
+    Classify as 'topic' only if the query clearly indicates a general subject area, lacks specific keywords and keyphrases, and exactly matches one of the topics.
 
-    Only classify as 'topic' if the query clearly indicates a general subject area *and* matches one of the provided topics. Do not infer broader topic categories.
+    Do not infer broader topic categories. 
 
     If the user input is not clearly related to news or current events, classify the search type as 'general'.
     
     However, defaulting to 'general' should be a last resort. Attempt to classify it as 'keyphrase' or 'topic' first.
-    
+
     Based on the search type:
     - If 'keyphrase', extract a list of keyphrases.
     - If 'topic', extract a list of topics from: {topics_str}.
