@@ -1,7 +1,7 @@
 # Simple Reflex AI Agent for News Search
 
 ## Overview
-This is a simple Flask-based web application that enables users to search for recent news articles using a simple reflex AI agent. The AI classifies user queries into different search types and fetches relevant news from major U.S. news outlets. The classification process is powered by Anthropic's Claude AI via AWS Bedrock, and news retrieval is handled using the `gnews` Python package.
+This is a simple Flask-based web application that enables users to search for recent (within the last 2 days specifially) news articles using a simple reflex AI agent. The AI classifies user queries into different search types and fetches relevant news from major U.S. news outlets. The classification process is powered by Anthropic's Claude AI via AWS Bedrock, and news retrieval is handled using the `gnews` Python package.
 
 ## Features
 - **Automated News Classification**: The AI classifies user queries as "keyphrase", "topic", or "general" search.
