@@ -23,4 +23,4 @@ This is a simple Flask-based web application that enables users to search for re
 The project is containerized using Docker and deployed to AWS App Runner. A Continuous Integration and Continuous Deployment (CI/CD) pipeline using GitHub Actions automates the build, test, and deployment process.
 
 ## Links
-- [Demo Video](https://youtu.be/xq1dTqnDkok)
+- [Demo Video](https://youtu.be/vo1jN7eYtsI)
