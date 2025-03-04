@@ -77,7 +77,7 @@ def topic_search(topics, topic_keywords):
                 news_items.extend(news)
             except Exception as e:
                 print(f"  Error searching for {keyword}: {e}")
-            time.sleep(0.5)
+            time.sleep(0.1)
     news_items = filter_fields(news_items)
     return news_items
 
@@ -91,6 +91,6 @@ def keyphrase_search(keyphrases):
             news_items.extend(news)
         except Exception as e:
             print(f"  Error searching for {keyword}: {e}")
-        time.sleep(0.5)
+        time.sleep(0.1)
     news_items = filter_fields(news_items)
     return news_items
